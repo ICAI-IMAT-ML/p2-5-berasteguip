@@ -96,8 +96,8 @@ class LogisticRegressor:
 
             
             # CAREFUL! You need to calculate the gradient of the loss function (*negative log-likelihood*)
-            dw = 
-            db = 
+            dw = np.sum((y_hat - y)*X)
+            db = np.sum(y_hat - y)
 
             # Regularization:
             # Apply regularization if it is selected.
