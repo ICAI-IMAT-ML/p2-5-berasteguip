@@ -96,8 +96,8 @@ class LogisticRegressor:
 
             
             # CAREFUL! You need to calculate the gradient of the loss function (*negative log-likelihood*)
-            dw = np.sum((y_hat - y)*X)
-            db = np.sum(y_hat - y)
+            dw = np.dot(X.T, (y_hat - y)) / m
+            db = np.sum(y_hat - y) / m
 
             # Regularization:
             # Apply regularization if it is selected.
@@ -149,9 +149,9 @@ class LogisticRegressor:
         probabilities = self.predict_proba(X)
         classification_result = [1 if prob >= threshold else 0 for prob in probabilities]
 
-        return classification_result
+        return np.array(classification_result)
 
-    def lasso_regularization(self, dw, m, C):
+    def lasso_regularization(self, dw, m, C, for_elastic:bool = False):
         """
         Applies L1 regularization (Lasso) to the gradient during the weight update step in gradient descent.
         L1 regularization encourages sparsity in the model weights, potentially setting some weights to zero,
@@ -166,18 +166,20 @@ class LogisticRegressor:
         - m (int): The number of samples in the dataset.
         - C (float): Inverse of regularization strength; must be a positive float.
                     Smaller values specify stronger regularization.
-
+        - for_elastic (bool): Adds the derivative of w if the method is not being called by elastic_regularization,
+                              in order to avoid suming twice dw.
         Returns:
         - np.ndarray: The adjusted gradient of the loss function with respect to the weights,
                       after applying L1 regularization.
         """
 
-        # TODO:
         # ADD THE LASSO CONTRIBUTION TO THE DERIVATIVE OF THE OBJECTIVE FUNCTION
-        lasso_gradient = None
+        lasso_gradient = (C / m) * np.sign(self.weights)
+        if for_elastic:
+            return lasso_gradient
         return dw + lasso_gradient
 
-    def ridge_regularization(self, dw, m, C):
+    def ridge_regularization(self, dw, m, C, for_elastic: bool = False):
         """
         Applies L2 regularization (Ridge) to the gradient during the weight update step in gradient descent.
         L2 regularization penalizes the square of the weights, which discourages large weights and helps to
@@ -192,15 +194,18 @@ class LogisticRegressor:
         - m (int): The number of samples in the dataset.
         - C (float): Inverse of regularization strength; must be a positive float.
                      Smaller values specify stronger regularization.
+        - for_elastic (bool): Adds the derivative of w if the method is not being called by elastic_regularization,
+                              in order to avoid suming twice dw.
 
         Returns:
         - np.ndarray: The adjusted gradient of the loss function with respect to the weights,
                         after applying L2 regularization.
         """
 
-        # TODO:
         # ADD THE RIDGE CONTRIBUTION TO THE DERIVATIVE OF THE OBJECTIVE FUNCTION
-        ridge_gradient = None
+        ridge_gradient = (C / m) * self.weights
+        if for_elastic:
+            return ridge_gradient
         return dw + ridge_gradient
 
     def elasticnet_regularization(self, dw, m, C, l1_ratio):
@@ -227,10 +232,10 @@ class LogisticRegressor:
         - np.ndarray: The adjusted gradient of the loss function with respect to the weights,
                       after applying Elastic Net regularization.
         """
-        # TODO:
+
         # ADD THE RIDGE CONTRIBUTION TO THE DERIVATIVE OF THE OBJECTIVE FUNCTION
         # Be careful! You can reuse the previous results and combine them here, but beware how you do this!
-        elasticnet_gradient = None
+        elasticnet_gradient = l1_ratio * self.lasso_regularization(dw, m, C, for_elastic=True) + (1 - l1_ratio) * self.ridge_regularization(dw, m, C, for_elastic=True)
         return dw + elasticnet_gradient
 
     @staticmethod
